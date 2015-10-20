@@ -1,47 +1,62 @@
 from sklearn import svm
-
+from sklearn.neighbors.nearest_centroid import NearestCentroid
+from random import sample
 
 class PEBL:
 
-    def __init__(self, positiveFeatures, unlabeledFeatures):
-        self.positiveFeatures = positiveFeatures
-        self.unlabeledFeatures = unlabeledFeatures
-        self.trainedSVM = None
+    def __init__(self):
+        pass
 
-    def train(self):
+    def _getLabelSets(self, labelDict):
+        positiveSet = set()
+        unlabeledSet = set()
+        for k, v in labelDict.iteritems():
+            if v == 1:
+                positiveSet.add(k)
+            else:
+                unlabeledSet.add(k)
+        return (positiveSet, unlabeledSet)
+
+    def _getFeatureVectors(self, featureIds, featureDict):
+        featureVectors = []
+        for featureId in featureIds:
+            featureVectors.append(featureDict[featureId])
+        return featureVectors
+
+    def train(self, featureDict, labelDict):
         """
         Trains an SVM using the PEBL algorithm
         """
-        newNegativeFeatures = self._strongNegatives()
-        negativeFeatures = []
+
+        (positiveSet, unlabeledSet) = self._getLabelSets(labelDict)
+
+        newNegativeFeatures = self._strongNegatives(unlabeledSet, positiveSet)
+        negativeSet = set()
         iterSVM = None
 
-        while(len(newNegativeFeatures) > 0):
-            negativeFeatures = list(set(negativeFeatures).union(set(newNegativeFeatures)))
+        while(len(newNegativeFeatures)):
+            negativeSet = negativeSet | newNegativeFeatures
             iterSVM = svm.SVC()
-            labels = ([1] * len(self.positiveFeatures)) + ([0] * len(negativeFeatures))
-            iterSVM.fit(self.positiveFeatures + negativeFeatures, labels)
-            iterP = list(set(self.unlabeledFeatures).difference(set(negativeFeatures)))
-            predictedLabels = iterSVM.predict(iterP)
-            newNegativeFeatures = []
+            labels = ([1] * len(positiveSet)) + ([0] * len(negativeSet))
+            featureVectors = self._getFeatureVectors(positiveSet, featureDict) + self._getFeatureVectors(negativeSet, featureDict)
+            iterSVM.fit(featureVectors, labels)
+            iterP = list(unlabeledSet - negativeSet)
+            if len(iterP) == 0:
+                break
+            predictedLabels = iterSVM.predict(self._getFeatureVectors(iterP, featureDict))
+            newNegativeFeatures = set()
             for i in range(0, len(predictedLabels)):
                 if predictedLabels[i] == 0:
-                    newNegativeFeatures.append(iterP[i])
+                    newNegativeFeatures.add(iterP[i])
 
-        self.trainedSVM = iterSVM
+        return iterSVM
 
-    def classify(self, features):
+    def _strongNegatives(self, unlabeledSet, positiveSet):
         """
-        Classifies a list of features using the trained SVM
-        :param features: list of features to be classified
-        :return: a list of predicted labels for the features
+        Should return the strongly negatives samples from the unlabeledSet
+        Currently just returns a set of random samples from the unlabeledSet that's 1% in size
+        :param unlabeledSet: set of unlabeled samples
+        :param positiveSet: set of postive samples
+        :return: set of strongly negative samples
         """
-
-        if self.trainedSVM == None:
-            return []
-
-        return self.trainedSVM.predict(features)
-
-
-    def _strongNegatives(self):
-        return self.unlabeledFeatures
+        return set(sample(unlabeledSet, int(.10 * len(unlabeledSet))))

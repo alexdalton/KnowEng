@@ -5,9 +5,9 @@ labelFile = "/home/alex/KnowEng/data/LEE_LIVER_CANCER_ACOX1.CB.txt"
 dataFile = "/home/alex/KnowEng/data/ENSG.kegg_pathway.txt"
 
 dataRetriever = dataGrabber()
-(positiveData, unlabeledData) = dataRetriever.getData(labelFile, dataFile, 1, 0)
+(featureVectorDict, labelDict) = dataRetriever.getData(labelFile, dataFile, 1, 0)
 
-classifierPEBL = PEBL(positiveData, unlabeledData)
-classifierPEBL.train()
+classifierPEBL = PEBL()
+classifierPEBL.train(featureVectorDict, labelDict)
 
-labels = classifierPEBL.classify(positiveData + unlabeledData)
+#labels = classifierPEBL.classify(positiveData + unlabeledData)

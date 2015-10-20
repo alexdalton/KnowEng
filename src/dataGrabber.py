@@ -7,12 +7,14 @@ class dataGrabber:
     def getData(self, labelFileName, dataFileName, geneIdx, dataIdx, splitCriteria = None):
         self._readData(dataFileName, geneIdx, dataIdx, splitCriteria)
         wantedGeneIds = open(labelFileName, "r").read().split()
-        positiveData = {}
+        labelDict = {}
         for wantedGeneId in wantedGeneIds:
             if wantedGeneId in self.data:
-                positiveData[wantedGeneId] = self.data[wantedGeneId]
-                del self.data[wantedGeneId]
-        return (positiveData, self.data)
+                labelDict[wantedGeneId] = 1
+        for geneID in self.data.iterkeys():
+            if geneID not in labelDict:
+                labelDict[geneID] = 0
+        return (self.data, labelDict)
 
     def _readData(self, fileName, geneIdx, dataIdx, splitCriteria):
         dataFile = open(fileName, "r")
