@@ -36,7 +36,8 @@ class PEBL:
 
         while(len(newNegativeFeatures)):
             negativeSet = negativeSet | newNegativeFeatures
-            iterSVM = svm.SVC()
+            print len(negativeSet)
+            iterSVM = svm.SVC(kernel="rbf", class_weight="auto")
             labels = ([1] * len(positiveSet)) + ([0] * len(negativeSet))
             featureVectors = self._getFeatureVectors(positiveSet, featureDict) + self._getFeatureVectors(negativeSet, featureDict)
             iterSVM.fit(featureVectors, labels)
