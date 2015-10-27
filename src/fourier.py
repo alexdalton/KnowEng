@@ -48,7 +48,7 @@ class Fourier:
                 a = 0
                 for j in range(0, len(features)):
                     a = a + labels[j] * self.basis(self.featureSubset(features[j], subset))
-                coeffs[subset] = abs(float(a) / float(len(features)))
+                coeffs[subset] = float(a) / float(len(features))
                 count += 1
 
                 if self.verbose and count % 1000 == 0:

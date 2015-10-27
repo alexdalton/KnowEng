@@ -13,7 +13,7 @@ class dataGrabber:
                 labelDict[wantedGeneId] = 1
         for geneID in self.data.iterkeys():
             if geneID not in labelDict:
-                labelDict[geneID] = -1
+                labelDict[geneID] = 0
         return (self.data, labelDict, self.dataIndices)
 
     def _readData(self, fileName, geneIdx, dataIdx, splitCriteria):
