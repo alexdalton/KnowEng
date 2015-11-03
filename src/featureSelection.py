@@ -18,8 +18,7 @@ class featureSelection():
     def rankFeaturesFourier(self, X, y):
         compare = lambda x,y: cmp(abs(x), abs(y))
         sorted_coeffs = sorted(Fourier(X, y).coeff(1).items(), key=operator.itemgetter(1), reverse=True, cmp=compare)
-        print sorted_coeffs
         ranked_subsets = []
         for tuple in sorted_coeffs:
-            ranked_subsets.append(tuple[0][0])
+            ranked_subsets.append((tuple[0][0], tuple[1]))
         return ranked_subsets
