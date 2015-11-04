@@ -23,12 +23,17 @@ class dataGrabber:
     def convertToCSV(self, featureDict, labelDict, fileName):
         csvFile = open(fileName, "w")
         featureLength = len(featureDict.values()[0])
-        featureNames = ["class"]
+        featureNames = []
         for i in range(0, featureLength):
             featureNames.append("F{0}".format(i))
+        featureNames.append("Class")
         csvFile.write(str(featureNames).strip("[]").replace("'", "") + '\n')
         for key, featureVector in featureDict.iteritems():
-            csvFile.write(str(labelDict[key]) + ", " + str(featureVector).strip("[]") + '\n')
+            if labelDict[key]:
+                label = "POSITIVE"
+            else:
+                label = "NEGATIVE"
+            csvFile.write(str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + label + '\n')
         csvFile.close()
 
     def _readData(self, fileName, geneIdx, dataIdx, splitCriteria):
