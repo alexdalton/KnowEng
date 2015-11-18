@@ -1,23 +1,26 @@
 import os
 
 class logger():
-    def __init__(self, logFileName=None):
+    def __init__(self, baseDir="/home/alex/KnowEng/logs/", logFileName=None, shouldLog=True):
+        self.shouldLog = shouldLog
         if logFileName:
-            self.logFileName = logFileName
+            self.logFileName = baseDir + logFileName
         else:
-            logFiles = os.listdir("/home/alex/KnowEng/logs")
+            logFiles = os.listdir(baseDir)
             if logFiles:
                 for i in range(0, len(logFiles)):
                     try:
                         logFiles[i] = int(logFiles[i].rstrip(".txt"))
                     except:
                         continue
-                self.logFileName = str(max(logFiles) + 1) + ".txt"
+                self.logFileName = baseDir + str(max(logFiles) + 1) + ".txt"
             else:
-                self.logFileName = "/home/alex/KnowEng/logs/0.txt"
+                self.logFileName = baseDir + "0.txt"
 
-    def log(self, contents):
-        logFile = open(self.logFileName, 'a')
-        logFile.write(contents + '\n')
-        logFile.close()
-        print(contents)
+    def log(self, contents, shouldPrint=True):
+        if self.shouldLog:
+            logFile = open(self.logFileName, 'a')
+            logFile.write(contents + '\n')
+            logFile.close()
+        if shouldPrint:
+            print(contents)
