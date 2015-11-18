@@ -1,38 +1,34 @@
 from dataGrabber import dataGrabber, dataFileDescriptor
-from PEBL import PEBL
+from Classifier import Classifier
 from featureSelection import featureSelection
 from centroid import Centroid
 from helpers import helpers
+from logger import logger
 
-#labelFile = "/home/alex/KnowEng/data/LEE_LIVER_CANCER_ACOX1.CB.txt"
+loggerObj = logger()
+helperObj = helpers(loggerObj)
+
+ripperRuleFileName = "/home/alex/KnowEng/data/RIPPER_RULES_GO40FILT2000_KEGGALL_x5POSITIVE.txt"
+matchFeatures = helperObj.getFeaturesFromRipperRules(ripperRuleFileName, ["go", "kegg"])
+
+filterTermsByCount = lambda feature, count: count >= 40 and count <= 2000
+filterByMatchFeatures = lambda feature, count: feature in matchFeatures
+
 breastCancerLabelFile = "/home/alex/KnowEng/data/VANTVEER_BREAST_CANCER_ESR1.CB.txt"
-keggDataFile = dataFileDescriptor("/home/alex/KnowEng/data/ENSG.kegg_pathway.txt")
+keggDataFile = dataFileDescriptor("/home/alex/KnowEng/data/ENSG.kegg_pathway.txt",
+                                  filterByMatchFeatures)
 goDataFile = dataFileDescriptor("/home/alex/KnowEng/data/ENSG.go_%_evid.txt",
-                                lambda x: x >= 40 and x <= 2000)
+                                filterByMatchFeatures)
 
 
-dataRetriever = dataGrabber()
-(featureVectorDict, labelDict, dataIndices) = dataRetriever.getData(breastCancerLabelFile, [goDataFile])
-
-#dataRetriever.convertToCSV(featureVectorDict, labelDict, "BC_GO_FILT_RIPPER.csv")
-
-# newFeatureDict = {}
-# newLabelDict = {}
-# posCount = 0
-# unlabeledCount = 0
-#
-# for k, v in featureVectorDict2.iteritems():
-#     if k in featureVectorDict1:
-#         newFeatureDict[k] = v + featureVectorDict1[k]
-#         newLabelDict[k] = labelDict1[k]
-#         if labelDict1[k] == 1:
-#             posCount += 1
-#         else:
-#             unlabeledCount += 1
+dataRetriever = dataGrabber(loggerObj)
+(featureVectorDict, labelDict, dataIndices) = dataRetriever.getData(breastCancerLabelFile, [goDataFile, keggDataFile])
 
 
-# posX = helpers().getFeaturesByLabel(featureVectorDict, labelDict, 1)
-unlabX = helpers().getFeaturesByLabel(featureVectorDict, labelDict, 0)
+#dataRetriever.convertToCSV(featureVectorDict, labelDict, "test.csv")
+
+posX = helperObj.getFeaturesByLabel(featureVectorDict, labelDict, 1)
+unlabX = helperObj.getFeaturesByLabel(featureVectorDict, labelDict, 0)
 #
 #
 #
@@ -54,24 +50,24 @@ unlabX = helpers().getFeaturesByLabel(featureVectorDict, labelDict, 0)
 # dataRetriever.convertToCSV(newFeatureDict, newLabelDict, "out2.csv")
 
 
-crossVal = []
-delKeys = []
+# crossVal = []
+# delKeys = []
+#
+# count = 0
+# total = 0
+# for k, v in labelDict.iteritems():
+#     if v == 1:
+#         count += 1
+#         total += 1
+#     if count == 4:
+#         count = 0
+#         crossVal.append(featureVectorDict[k])
+#         delKeys.append(k)
+#         del featureVectorDict[k]
+# for key in delKeys:
+#     del labelDict[key]
 
-count = 0
-total = 0
-for k, v in labelDict.iteritems():
-    if v == 1:
-        count += 1
-        total += 1
-    if count == 4:
-        count = 0
-        crossVal.append(featureVectorDict[k])
-        delKeys.append(k)
-        del featureVectorDict[k]
-for key in delKeys:
-    del labelDict[key]
-
-x = PEBL(verbose=True)
+x = Classifier(loggerObj, verbose=True)
 
 # print("no gamma")
 # x.train(featureVectorDict, labelDict)
@@ -81,10 +77,11 @@ x = PEBL(verbose=True)
 # x.train(featureVectorDict, labelDict, gamma=.8)
 # x.score(crossVal + unlabX, [1] * len(crossVal) + [0] * len(unlabX))
 #
-print("number of hidden positives: {0}".format(len(crossVal)))
-print("Data size: {0} x {1}".format(len(featureVectorDict.values()[0]), len(featureVectorDict)))
-x.train(featureVectorDict, labelDict, kernel="poly", probability=True, class_weight="auto", gamma=.2)
-x.score(crossVal + unlabX, [1] * len(crossVal) + [0] * len(unlabX))
+#print("number of hidden positives: {0}".format(len(crossVal)))
+
+x.trainSVM(featureVectorDict, labelDict, kernel="rbf", class_weight ='auto', gamma=0.0, degree=3)
+x.score(posX + unlabX, [1] * len(posX) + [0] * len(unlabX))
+
 #
 # print("linear")
 # x.train(featureVectorDict, labelDict, kernel="linear")

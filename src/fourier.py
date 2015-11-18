@@ -4,7 +4,8 @@ from math import factorial
 
 class Fourier:
 
-    def __init__(self, X, y, verbose=False):
+    def __init__(self, X, y, logger, verbose=False):
+        self.logger = logger
         self.verbose = verbose
         self.featureDim = len(X[0])
         self.X = X
@@ -52,30 +53,6 @@ class Fourier:
                 count += 1
 
                 if self.verbose and count % 1000 == 0:
-                    print("{0:.2f}% Complete".format(100 * float(count) / float(totalCoeffs)))
+                    self.logger.log("{0:.2f}% Complete".format(100 * float(count) / float(totalCoeffs)))
 
         return coeffs
-
-    # def calcM(self, lam, prob):
-    #     return int(ceil(2 * log(prob / 2) / (-1 * lam * lam)))
-
-    # def _getLabelSets(self):
-    #     positiveSet = set()
-    #     negativeSet = set()
-    #     for k, v in self.labelDict.iteritems():
-    #         if v == 1:
-    #             positiveSet.add(k)
-    #         else:
-    #             negativeSet.add(k)
-    #     return (positiveSet, negativeSet)
-
-    # def getRandomFeatures(self, numFeatures):
-    #     (positiveSet, negativeSet) = self._getLabelSets()
-    #     randomIds = random.sample(negativeSet, numFeatures - len(positiveSet)) + list(positiveSet)
-    #     #randomIds = random.sample(self.featureIds, numFeatures)
-    #     features = []
-    #     labels = []
-    #     for randomId in randomIds:
-    #         features.append(self.featureDict[randomId])
-    #         labels.append(self.labelDict[randomId])
-    #     return (features, labels)

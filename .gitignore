@@ -1,4 +1,7 @@
+Dropbox
 *.pyc
 .idea/
+data/*
+logs/*
 *.txt
 *.csv
