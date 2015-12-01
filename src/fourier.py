@@ -4,12 +4,12 @@ from math import factorial
 
 class Fourier:
 
-    def __init__(self, X, y, logger, verbose=False):
+    def __init__(self, dict_X, dict_y, logger, verbose=False):
         self.logger = logger
         self.verbose = verbose
-        self.featureDim = len(X[0])
-        self.X = X
-        self.y = y
+        self.featureDim = len(dict_X.values()[0])
+        self.dict_X = dict_X
+        self.dict_y = dict_y
 
     def basis(self, boolArray):
         x = 0
@@ -45,11 +45,15 @@ class Fourier:
         for i in range(1, d + 1):
             subsets = set(itertools.combinations(featureRange, i))
             for subset in subsets:
-                (features, labels) = (self.X, self.y)
+                exampleKeys = self.dict_X.keys()
                 a = 0
-                for j in range(0, len(features)):
-                    a = a + labels[j] * self.basis(self.featureSubset(features[j], subset))
-                coeffs[subset] = float(a) / float(len(features))
+                for exampleKey in exampleKeys:
+                    if self.dict_y[exampleKey] < 1:
+                        label = -1
+                    else:
+                        label = 1
+                    a = a + label * self.basis(self.featureSubset(self.dict_X[exampleKey], subset))
+                coeffs[subset] = float(a) / float(len(exampleKeys))
                 count += 1
 
                 if self.verbose and count % 1000 == 0:

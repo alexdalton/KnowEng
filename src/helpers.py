@@ -39,13 +39,13 @@ class helpers():
 
     def getLabelSets(self, labelDict):
         positiveSet = set()
-        unlabeledSet = set()
+        negativeSet = set()
         for k, v in labelDict.iteritems():
             if v == 1:
                 positiveSet.add(k)
             else:
-                unlabeledSet.add(k)
-        return (positiveSet, unlabeledSet)
+                negativeSet.add(k)
+        return (positiveSet, negativeSet)
 
     def getFeaturesByLabel(self, featureDict, labelDict, label):
         features = []

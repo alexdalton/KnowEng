@@ -36,7 +36,7 @@ class Classifier:
         # holds the trained classifier after training
         self.trainedClassifier = None
 
-    def _initNewClassificationModel(self, dict_X, dict_y, kCrossValPos, kCrossValNeg):
+    def _initNewClassificationModel(self, dict_X, dict_y, kCrossValPos, kCrossValNeg, crossValExcludeSet):
         self.dict_X = dict_X
         self.dict_y = dict_y
         self.kCrossValPos = kCrossValPos
@@ -46,16 +46,19 @@ class Classifier:
         (self.allPosExampleKeys, self.allNegExampleKeys) = self.helperObj.getLabelSets(dict_y)
         self.numAllPosExamples = len(self.allPosExampleKeys)
         self.numAllNegExamples = len(self.allNegExampleKeys)
-        self._hideSamples()
+        self.crossValExcludeSet = set(crossValExcludeSet)
+        self._hideSamples(crossValExcludeSet)
 
-    def _hideSamples(self):
+    def _hideSamples(self, crossValExcludeSet):
         if self.kCrossValPos > 1:
-            self.hiddenPosExampleKeys = sample(self.allPosExampleKeys, self.numAllPosExamples / self.kCrossValPos)
+            newPosExampleKeys = set(self.allPosExampleKeys) - set(crossValExcludeSet)
+            self.hiddenPosExampleKeys = sample(newPosExampleKeys, len(newPosExampleKeys) / self.kCrossValPos)
             self.numHiddenPosExamples = len(self.hiddenPosExampleKeys)
             self.logger.log("{0}-fold cross-validation on positive examples".format(self.kCrossValPos))
 
         if self.kCrossValNeg > 1:
-            self.hiddenNegExampleKeys = sample(self.allNegExampleKeys, self.numAllNegExamples / self.kCrossValNeg)
+            newNegExampleKeys = set(self.allNegExampleKeys) - set(crossValExcludeSet)
+            self.hiddenNegExampleKeys = sample(newNegExampleKeys, len(newNegExampleKeys) / self.kCrossValNeg)
             self.numHiddenNegExamples = len(self.hiddenNegExampleKeys)
             self.logger.log("{0}-fold cross-validation on negative examples".format(self.kCrossValNeg))
 
@@ -78,7 +81,7 @@ class Classifier:
         # If no cross validation on positive examples, add all positives to hidden X and y
         if self.kCrossValPos <= 1:
             predPosStr = "all the given positive training examples"
-            for posExampleKey in self.allPosExampleKeys:
+            for posExampleKey in set(self.allPosExampleKeys) - self.crossValExcludeSet:
                 self.hidden_X.append(self.dict_X[posExampleKey])
                 self.hidden_y.append(1)
 
@@ -86,11 +89,11 @@ class Classifier:
         # If no cross validation on negative examples, add all negatives to hidden X and y
         if self.kCrossValNeg <= 1:
             predNegStr = "all the given negative training examples"
-            for negExampleKey in self.allNegExampleKeys:
+            for negExampleKey in set(self.allNegExampleKeys) - self.crossValExcludeSet:
                 self.hidden_X.append(self.dict_X[negExampleKey])
                 self.hidden_y.append(0)
 
-        self.logger.log("Predicting on {0} and {0}".format(predPosStr, predNegStr))
+        self.logger.log("Predicting on {0} and {1}".format(predPosStr, predNegStr))
         predictions = list(self.trainedClassifier.predict(self.hidden_X))
 
         end = time.mktime(time.localtime())
@@ -189,10 +192,10 @@ class Classifier:
             self.logger.log("Total Number of Negative Examples: {0}".format(self.numAllNegExamples))
             self.logger.log("Number of Hidden Negative Examples: {0}".format(self.numHiddenNegExamples))
 
-    def trainSVM(self, dict_X, dict_y, kCrossValPos=0, kCrossValNeg=0, C=1.0, kernel="rbf", gamma=0.0,
+    def trainSVM(self, dict_X, dict_y, kCrossValPos=0, kCrossValNeg=0, crossValExcludeSet=set(), C=1.0, kernel="rbf", gamma=0.0,
                  probability=False, shrinking=True, class_weight="auto", degree=3, coef0=0.0):
         self.logger.log("Algorithm: SVM\n")
-        self._initNewClassificationModel(dict_X, dict_y, kCrossValPos, kCrossValNeg)
+        self._initNewClassificationModel(dict_X, dict_y, kCrossValPos, kCrossValNeg, crossValExcludeSet)
         self._printVerboseTrainInfo(C, kernel, degree, gamma, coef0, probability, shrinking, class_weight)
 
         start = time.mktime(time.localtime())
@@ -215,10 +218,10 @@ class Classifier:
         self.logger.log("Elapsed training time: {0} minutes".format((end - start) / 60))
         return svc
 
-    def trainPEBLSVM(self, dict_X, dict_y, kCrossValPos=0, kCrossValNeg=0, C=1.0, kernel="rbf", gamma=0.0,
+    def trainPEBLSVM(self, dict_X, dict_y, kCrossValPos=0, kCrossValNeg=0, crossValExcludeSet=set(), C=1.0, kernel="rbf", gamma=0.0,
                      probability=False, shrinking=True, class_weight="auto", degree=3, coef0=0.0):
         self.logger.log("Algorithm: PEBL\n")
-        self._initNewClassificationModel(dict_X, dict_y, kCrossValPos, kCrossValNeg)
+        self._initNewClassificationModel(dict_X, dict_y, kCrossValPos, kCrossValNeg, crossValExcludeSet)
         self._printVerboseTrainInfo(C, kernel, degree, gamma, coef0, probability, shrinking, class_weight)
 
         start = time.mktime(time.localtime())
@@ -260,8 +263,8 @@ class Classifier:
         return iterSVM
 
     def _strongNegatives(self, unlabeledSet, positiveSet):
-        posX = self.helperObj.dictOfFeaturesToList(self.dict_X, positiveSet)
-        unlabX = self.helperObj.dictOfFeaturesToList(self.dict_X, unlabeledSet)
+        posX = self.helperObj.dictOfFeaturesToList(self.dict_X, set(positiveSet) - self.crossValExcludeSet)
+        unlabX = self.helperObj.dictOfFeaturesToList(self.dict_X, set(unlabeledSet) - self.crossValExcludeSet)
 
         centroidPosX = Centroid().getCentroid(posX)
         indices = Centroid().getNFarthestPoints(unlabX, centroidPosX, len(posX))
