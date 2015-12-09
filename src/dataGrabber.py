@@ -31,18 +31,22 @@ class dataGrabber:
         wantedGeneIds = open(positiveLabelsFileName, "r").read().split()
         labelDict = {}
         count = 0
+        posKeys = []
+        negKeys = []
         for wantedGeneId in wantedGeneIds:
             if wantedGeneId in self.data:
                 labelDict[wantedGeneId] = 1
+                posKeys.append(wantedGeneId)
             if wantedGeneId not in self.data:
                 count += 1
         self.logger.log("Missing {0} geneIDs from {1} in data file set\n".format(count, positiveLabelsFileName))
         for geneID in self.data.iterkeys():
             if geneID not in labelDict:
                 labelDict[geneID] = 0
-        return (self.data, labelDict, self.dataIndices)
+                negKeys.append(geneID)
+        return (self.data, labelDict, posKeys, negKeys, self.dataIndices)
 
-    def convertToCSV(self, featureDict, labelDict, fileName):
+    def convertToCSV(self, featureDict, labelDict, fileName, duplicatePos=1, duplicateNeg=1):
         csvFile = open(fileName, "w")
         featureNames = ["GeneID"] + [""] * len(self.dataIndices)
         for edgeName, index in self.dataIndices.iteritems():
@@ -54,13 +58,13 @@ class dataGrabber:
                 label = "POSITIVE"
             else:
                 label = "NEGATIVE"
+            outString = str(key) + ", " + str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + str(label)
             if label == "POSITIVE":
-                for i in range (0, 5):
-                    outString = str(key) + ", " + str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + str(label)
+                for i in range (0, duplicatePos):
                     csvFile.write(outString + '\n')
             else:
-                outString = str(key) + ", " + str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + str(label)
-                csvFile.write(outString + '\n')
+                for i in range(0, duplicateNeg):
+                    csvFile.write(outString + '\n')
         csvFile.close()
 
     def _readData(self, dataFileDescriptors):

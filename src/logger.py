@@ -12,7 +12,7 @@ class logger():
                     try:
                         logFiles[i] = int(logFiles[i].rstrip(".txt"))
                     except:
-                        continue
+                        logFiles[i] = 0
                 self.logFileName = baseDir + str(max(logFiles) + 1) + ".txt"
             else:
                 self.logFileName = baseDir + "0.txt"

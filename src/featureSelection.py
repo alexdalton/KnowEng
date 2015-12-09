@@ -18,4 +18,9 @@ class featureSelection():
     def rankFeaturesFourier(self, X, y, d=1):
         compare = lambda x,y: cmp(abs(x), abs(y))
         sorted_coeffs = sorted(Fourier(X, y, self.logger).coeff(d).items(), key=operator.itemgetter(1), reverse=True, cmp=compare)
-        return sorted_coeffs
+        featureIndices = []
+        for ranking in sorted_coeffs:
+            for index in ranking[0]:
+                if index not in featureIndices:
+                    featureIndices.append(index)
+        return featureIndices
