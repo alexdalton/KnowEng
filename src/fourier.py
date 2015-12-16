@@ -1,5 +1,7 @@
 import itertools
 from math import factorial
+import json
+import operator
 
 
 class Fourier:
@@ -11,14 +13,29 @@ class Fourier:
         self.dict_X = dict_X
         self.dict_y = dict_y
 
-    def basis(self, boolArray):
-        x = 0
-        for i in range(0, len(boolArray)):
-            x = x + boolArray[i]
-        if x % 2 == 0:
-            return 1
+    def getFourierFeatures(self, d=1, N=10, coeffsFileName=None):
+        if coeffsFileName is None:
+            compare = lambda x,y: cmp(abs(x), abs(y))
+            sorted_coeffs = sorted(self.coeff(d).items(), key=operator.itemgetter(1), reverse=True, cmp=compare)
+            json.dump(sorted_coeffs, open("fourier_{0}".format(d), "w"))
         else:
-            return -1
+            sorted_coeffs = json.load(open(coeffsFileName))
+
+        new_dict_X = {}
+        for key in self.dict_X.iterkeys():
+            new_dict_X[key] = []
+
+        for subset_coeff in sorted_coeffs[0:N]:
+            for key, featureVector in self.dict_X.iteritems():
+                new_dict_X[key].append(self.basis(self.featureSubset(featureVector, subset_coeff[0]), negReturn=0))
+
+        return new_dict_X
+
+    def basis(self, boolArray, posReturn=1, negReturn=-1):
+        if sum(boolArray) % 2 == 0:
+            return posReturn
+        else:
+            return negReturn
 
     def featureSubset(self, featureVector, subset):
         out = []
@@ -52,7 +69,7 @@ class Fourier:
                         label = -1
                     else:
                         label = 1
-                    a = a + label * self.basis(self.featureSubset(self.dict_X[exampleKey], subset))
+                    a += label * self.basis(self.featureSubset(self.dict_X[exampleKey], subset))
                 coeffs[subset] = float(a) / float(len(exampleKeys))
                 count += 1
 
