@@ -2,6 +2,7 @@ import itertools
 from math import factorial
 import json
 import operator
+import matplotlib.pyplot as plt
 
 
 class Fourier:
@@ -13,7 +14,7 @@ class Fourier:
         self.dict_X = dict_X
         self.dict_y = dict_y
 
-    def getFourierFeatures(self, d=1, N=10, coeffsFileName=None):
+    def getFourierFeatures(self, d=1, N=10, thresh=None, coeffsFileName=None):
         if coeffsFileName is None:
             compare = lambda x,y: cmp(abs(x), abs(y))
             sorted_coeffs = sorted(self.coeff(d).items(), key=operator.itemgetter(1), reverse=True, cmp=compare)
@@ -21,13 +22,30 @@ class Fourier:
         else:
             sorted_coeffs = json.load(open(coeffsFileName))
 
+        # hist = []
+        # for subset_coeff in sorted_coeffs:
+        #     hist.append(subset_coeff[1])
+        #
+        # n, bins, patches = plt.hist(hist, 100)
+        # plt.title('Fourier Coeffecient Distribution for d = {0}'.format(d))
+        # plt.xlabel('Fourier Coeffecient Value')
+        # plt.ylabel('Bin Count')
+        # plt.show()
+
         new_dict_X = {}
         for key in self.dict_X.iterkeys():
             new_dict_X[key] = []
 
-        for subset_coeff in sorted_coeffs[0:N]:
-            for key, featureVector in self.dict_X.iteritems():
-                new_dict_X[key].append(self.basis(self.featureSubset(featureVector, subset_coeff[0]), negReturn=0))
+        if thresh:
+            for subset_coeff in sorted_coeffs:
+                if abs(subset_coeff[1]) < thresh:
+                    break
+                for key, featureVector in self.dict_X.iteritems():
+                    new_dict_X[key].append(self.basis(self.featureSubset(featureVector, subset_coeff[0]), negReturn=0))
+        else:
+            for subset_coeff in sorted_coeffs[0:N]:
+                for key, featureVector in self.dict_X.iteritems():
+                    new_dict_X[key].append(self.basis(self.featureSubset(featureVector, subset_coeff[0]), negReturn=0))
 
         return new_dict_X
 

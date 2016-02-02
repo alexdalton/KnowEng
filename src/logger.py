@@ -4,7 +4,7 @@ class logger():
     def __init__(self, baseDir="/home/alex/KnowEng/logs/", logFileName=None, shouldLog=True):
         self.shouldLog = shouldLog
         if logFileName:
-            self.logFileName = baseDir + logFileName
+            self.logFileName = os.path.join(baseDir, logFileName)
         else:
             logFiles = os.listdir(baseDir)
             if logFiles:
@@ -13,9 +13,9 @@ class logger():
                         logFiles[i] = int(logFiles[i].rstrip(".txt"))
                     except:
                         logFiles[i] = 0
-                self.logFileName = baseDir + str(max(logFiles) + 1) + ".txt"
+                self.logFileName = os.path.join(baseDir, str(max(logFiles) + 1) + ".txt")
             else:
-                self.logFileName = baseDir + "0.txt"
+                self.logFileName = os.path.join(baseDir, "0.txt")
 
     def log(self, contents, shouldPrint=True):
         if self.shouldLog:
