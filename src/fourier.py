@@ -22,15 +22,16 @@ class Fourier:
         else:
             sorted_coeffs = json.load(open(coeffsFileName))
 
-        # hist = []
-        # for subset_coeff in sorted_coeffs:
-        #     hist.append(subset_coeff[1])
-        #
+        hist = []
+        for subset_coeff in sorted_coeffs:
+            hist.append(subset_coeff[1])
+
         # n, bins, patches = plt.hist(hist, 100)
         # plt.title('Fourier Coeffecient Distribution for d = {0}'.format(d))
         # plt.xlabel('Fourier Coeffecient Value')
         # plt.ylabel('Bin Count')
         # plt.show()
+        # exit(0)
 
         new_dict_X = {}
         for key in self.dict_X.iterkeys():

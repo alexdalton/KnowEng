@@ -57,7 +57,13 @@ if not config.has_section("global"):
 resultFileBaseDir = "/home/alex/KnowEng/results"
 resultsFilename = os.path.join(resultFileBaseDir, config.get("global", "resultsFile"))
 shouldAppend = config.get("global", "append") in ["True", "true", "1"]
-resultsHeaders = ["Test ID", "Gene Set", "Feature Info", "Algorithm", "Algorithm Info", "Performance Info"]
+resultsHeaders = ["Test ID", "Gene Set", "Feature Info", "Algorithm", "Algorithm Info", "Data Size", "Num pos",
+                  "Num hidden pos", "Num neg", "Num hidden neg", "Hidden Pos Precision", "Hidden Pos Recall", "Hidden Pos F1",
+                  "Hidden Neg Precision", "Hidden Neg Recall", "Hidden Neg F1", "Hidden True Pos",
+                  "Hidden False Neg", "Hidden False Pos", "Hidden True Neg", "Hidden Accuracy",
+                  "Train Pos Precision", "Train Pos Recall", "Train Pos F1", "Train Neg Precision",
+                  "Train Neg Recall", "Train Neg F1", "Train True Pos", "Train False Neg",
+                  "Train False Pos", "Train True Neg", "Train Accuracy"]
 
 if shouldAppend:
     results_fp = open(resultsFilename, 'a')
@@ -69,13 +75,19 @@ for testName in config.sections():
     if testName == "global":
         continue
 
+    output = []
+    output.append(testName)
+
     # Get files needed to create labeled feature vectors
     labelFile = os.path.join("/home/alex/KnowEng/data/geneSets/", grabOptionOrError(config, testName, "labelFile"))
+    output.append(labelFile)
     featureFiles = grabOptionOrError(config, testName, "featureFiles", split=True)
     featureFilters = grabOptionOrDefault(config, testName, "featureFilters", split=True, default=[])
+    output.append(str(featureFiles).replace(",", ";") + '; ' + str(featureFilters).replace(",", ";"))
 
     # Get algorithm to run for this test
     algorithm = grabOptionOrError(config, testName, "algorithm")
+    output.append(algorithm)
 
     # Get SVM variables
     kernel = str(grabOptionOrDefault(config, testName, "kernel", default="rbf"))
@@ -97,6 +109,11 @@ for testName in config.sections():
     shouldUndersample = bool(grabOptionOrDefault(config, testName, "undersample", default="False") in ["True", "true", "1"])
     undersample_percent = float(grabOptionOrDefault(config, testName, "undersample_percent", default=.50))
 
+    output.append("kernel={0}; gamma={1}; degree={2}; class_weight={3}; kCrossValPos={4}; kCrossValNeg={5}; "
+                  "C={6}; probability={7}; shrinking={8}; coef0={9}; SMOTE={10}; N={11}; k={12}; "
+                  "undersample={13}; percent={14}".format(kernel, gamma, degree, class_weight, kCrossValPos,
+                                                        kCrossValNeg, C, probability, shrinking, coef0, shouldSMOTE,
+                                                        smote_N, smote_k, shouldUndersample, undersample_percent))
     featureDataFiles = []
     featureFileBaseDir = "/home/alex/KnowEng/data/edges"
     for i in range(0, len(featureFiles)):
@@ -117,7 +134,12 @@ for testName in config.sections():
     loggerObj = logger(baseDir=logOutputDir)
     helperObj = helpers(loggerObj)
     dataRetriever = dataGrabber(loggerObj)
-    (dict_X, dict_y, positiveKeys, negativeKeys, dataIndices) = dataRetriever.getData(labelFile, featureDataFiles)
+    featureFiles[0] = os.path.join(featureFileBaseDir, featureFiles[0])
+    featureFiles[1] = os.path.join(featureFileBaseDir, featureFiles[1])
+    (dict_X, dict_y, positiveKeys, negativeKeys) = dataRetriever.getDCAData(featureFiles[0], featureFiles[1], labelFile)
+
+    # dataRetriever.convertToCSV(dict_X, dict_y, 'dcaVantveer.csv')
+    # exit(0)
 
     excludeKeys = set()
     sampler = ExampleSampler(dict_X, dict_y, loggerObj)
@@ -133,5 +155,6 @@ for testName in config.sections():
     else:
         x.trainPEBLSVM(kernel, C, gamma, probability, shrinking, class_weight, degree, coef0)
 
-    x.score()
+    output += x.score()
 
+    results_fp.write(str(output).replace("[", "").replace("]", "") + '\n')

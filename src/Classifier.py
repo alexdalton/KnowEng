@@ -26,25 +26,31 @@ class Classifier:
         self.numAllPosExamples = len(self.allPosExampleKeys)
         self.numAllNegExamples = len(self.allNegExampleKeys)
         self.crossValExcludeSet = set(crossValExcludeSet)
-        self._hideSamples(crossValExcludeSet)
+        self._hideSamples()
+
+        self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
+        self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))
+        self.logger.log("Number of Hidden Positive Examples: {0}".format(self.numHiddenPosExamples))
+        self.logger.log("Total Number of Negative Examples: {0}".format(self.numAllNegExamples))
+        self.logger.log("Number of Hidden Negative Examples: {0}".format(self.numHiddenNegExamples))
 
         # holds the trained classifier after training
         self.trainedClassifier = None
 
-    def _hideSamples(self, crossValExcludeSet):
+    def _hideSamples(self):
         self.hiddenPosExampleKeys = []
         self.hiddenNegExampleKeys = []
         self.numHiddenPosExamples = 0
         self.numHiddenNegExamples = 0
         if self.kCrossValPos > 1:
-            newPosExampleKeys = set(self.allPosExampleKeys) - set(crossValExcludeSet)
-            self.hiddenPosExampleKeys = sample(newPosExampleKeys, len(newPosExampleKeys) / self.kCrossValPos)
+            validPosExampleKeys = set(self.allPosExampleKeys) - self.crossValExcludeSet
+            self.hiddenPosExampleKeys = sample(validPosExampleKeys, len(validPosExampleKeys) / self.kCrossValPos)
             self.numHiddenPosExamples = len(self.hiddenPosExampleKeys)
             self.logger.log("{0}-fold cross-validation on positive examples".format(self.kCrossValPos))
 
         if self.kCrossValNeg > 1:
-            newNegExampleKeys = set(self.allNegExampleKeys) - set(crossValExcludeSet)
-            self.hiddenNegExampleKeys = sample(newNegExampleKeys, len(newNegExampleKeys) / self.kCrossValNeg)
+            validNegExampleKeys = set(self.allNegExampleKeys) - self.crossValExcludeSet
+            self.hiddenNegExampleKeys = sample(validNegExampleKeys, len(validNegExampleKeys) / self.kCrossValNeg)
             self.numHiddenNegExamples = len(self.hiddenNegExampleKeys)
             self.logger.log("{0}-fold cross-validation on negative examples".format(self.kCrossValNeg))
 
@@ -54,99 +60,95 @@ class Classifier:
             del self.dict_X[exampleKey]
             del self.dict_y[exampleKey]
 
-        self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
-        self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))
-        self.logger.log("Number of Hidden Positive Examples: {0}".format(self.numHiddenPosExamples))
-        self.logger.log("Total Number of Negative Examples: {0}".format(self.numAllNegExamples))
-        self.logger.log("Number of Hidden Negative Examples: {0}".format(self.numHiddenNegExamples))
-
     def score(self):
         if self.trainedClassifier is None:
             self.logger.log("Need to train an SVM first")
             return
 
+        scores = ["{0} x {1}".format(self.featureDims, self.totalExamples), self.numAllPosExamples,
+                  self.numHiddenPosExamples, self.numAllNegExamples, self.numHiddenNegExamples]
+        if self.kCrossValNeg > 1 or self.kCrossValPos > 1:
+            start = time.mktime(time.localtime())
+            self.logger.log("Running classification on hidden examples")
+            classifications = list(self.trainedClassifier.predict(self.hidden_X))
+            end = time.mktime(time.localtime())
+            self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
+            scores += self.reportScores(classifications, self.hidden_y)
+        else:
+            scores += ['N/A'] * 11
+
+        self.logger.log("Running classification on training examples")
+        trainingExamples = []
+        trainingLabels = []
+        for posExampleKey in set(self.allPosExampleKeys) - set(self.hiddenPosExampleKeys) - self.crossValExcludeSet:
+            trainingExamples.append(self.dict_X[posExampleKey])
+            trainingLabels.append(1)
+        for negExampleKey in set(self.allNegExampleKeys) - set(self.hiddenNegExampleKeys) - self.crossValExcludeSet:
+            trainingExamples.append(self.dict_X[negExampleKey])
+            trainingLabels.append(0)
         start = time.mktime(time.localtime())
-
-        predictionLabels = list(self.hidden_y)
-
-        predPosStr = "the hidden positive examples"
-        # If no cross validation on positive examples, add all positives to hidden X and y
-        predictionPositives = []
-        if self.kCrossValPos <= 1:
-            predPosStr = "all the given positive training examples"
-            for posExampleKey in set(self.allPosExampleKeys) - self.crossValExcludeSet:
-                predictionPositives.append(self.dict_X[posExampleKey])
-                predictionLabels.append(1)
-
-        predNegStr = "the hidden negative examples"
-        # If no cross validation on negative examples, add all negatives to hidden X and y
-        predictionNegatives = []
-        if self.kCrossValNeg <= 1:
-            predNegStr = "all the given negative training examples"
-            for negExampleKey in set(self.allNegExampleKeys) - self.crossValExcludeSet:
-                predictionNegatives.append(self.dict_X[negExampleKey])
-                predictionLabels.append(0)
-
-        self.logger.log("Predicting on {0} and {1}".format(predPosStr, predNegStr))
-        predictions = list(self.trainedClassifier.predict(self.hidden_X + predictionPositives + predictionNegatives))
-
+        classifications = list(self.trainedClassifier.predict(trainingExamples))
         end = time.mktime(time.localtime())
         self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
+        scores += self.reportScores(classifications, trainingLabels)
 
-        numPosEx = float(predictionLabels.count(1))
-        numNegEx = float(predictionLabels.count(0))
+        return scores
+
+    def reportScores(self, predictedLabels, trueLabels):
+        numPosEx = float(trueLabels.count(1))
+        numNegEx = float(trueLabels.count(0))
         numCorrectPos = 0.0
         numCorrectNeg = 0.0
-        numPosPredictions = float(predictions.count(1))
-        numNegPredictions = float(predictions.count(0))
+        numPosPredictions = float(predictedLabels.count(1))
+        numNegPredictions = float(predictedLabels.count(0))
 
-        for i in range(0, len(predictions)):
-            if predictions[i] == predictionLabels[i] == 1:
+        for i in range(0, len(predictedLabels)):
+            if predictedLabels[i] == trueLabels[i] == 1:
                 numCorrectPos += 1.0
-            if predictions[i] == predictionLabels[i] == 0:
+            if predictedLabels[i] == trueLabels[i] == 0:
                 numCorrectNeg += 1.0
 
         try:
-            accuracy = (numCorrectPos + numCorrectNeg) / float(len(predictions))
+            accuracy = (numCorrectPos + numCorrectNeg) / float(len(predictedLabels))
         except ZeroDivisionError:
             self.logger.log("Number of predictions = 0")
-            accuracy = 0
+            accuracy = float('nan')
 
         try:
             pprecision = numCorrectPos / numPosPredictions
         except ZeroDivisionError:
             self.logger.log("No positive predictions made")
-            pprecision = 0
+            pprecision = float('nan')
 
         try:
             precall = float(numCorrectPos) / numPosEx
         except ZeroDivisionError:
             self.logger.log("No positive examples")
-            precall = 0
+            precall = float('nan')
 
         try:
             pf1 = (2 * pprecision * precall) / (pprecision + precall)
         except ZeroDivisionError:
             self.logger.log("PPrecision and precall = 0")
-            pf1 = 1
+            pf1 = float('nan')
 
         try:
             nprecision = numCorrectNeg / numNegPredictions
         except ZeroDivisionError:
             self.logger.log("No negative predictions made")
-            nprecision = 0
+            nprecision = float('nan')
 
         try:
             nrecall = float(numCorrectNeg) / numNegEx
         except ZeroDivisionError:
             self.logger.log("No positive examples")
-            nrecall = 0
+            nrecall = float('nan')
 
         try:
             nf1 = (2 * nprecision * nrecall) / (nprecision + nrecall)
         except ZeroDivisionError:
             self.logger.log("Precision and recall = 0")
-            nf1 = 1
+            nf1 = float('nan')
 
         headers = ["Class", "Precision", "Recall", "F1"]
         table = [["POSITIVE", pprecision, precall, pf1],
@@ -154,13 +156,16 @@ class Classifier:
         self.logger.log('\n' + tabulate(table, headers=headers))
 
         headers = ["", "Predicted POSITIVE", "Predicted NEGATIVE"]
-        table = [["Actual POSITIVE", numCorrectPos, numNegPredictions - numCorrectNeg],
-                 ["Actual NEGATIVE", numPosPredictions - numCorrectPos, numCorrectNeg]]
+        numIncorrectPos = numNegPredictions - numCorrectNeg
+        numIncorrectNeg = numPosPredictions - numCorrectPos
+        table = [["Actual POSITIVE", numCorrectPos, numIncorrectPos],
+                 ["Actual NEGATIVE", numIncorrectNeg, numCorrectNeg]]
         self.logger.log('\n' + tabulate(table, headers=headers))
 
         self.logger.log("\nOverall accuracy: {0}".format(accuracy))
 
-        return numCorrectPos, numNegPredictions - numCorrectNeg, numPosPredictions - numCorrectPos, numCorrectNeg
+        return [pprecision, precall, pf1, nprecision, nrecall, nf1, numCorrectPos,
+                numIncorrectPos, numIncorrectNeg, numCorrectNeg, accuracy]
 
     def _printVerboseTrainInfo(self, C, kernel, degree, gamma, coef0, probability, shrinking, class_weight):
         if self.verbose:

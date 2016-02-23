@@ -1,5 +1,6 @@
 import inspect
 from tabulate import tabulate
+import numpy as np
 
 
 class dataFileDescriptor:
@@ -17,6 +18,27 @@ class dataGrabber:
         self.data = {}
         self.dataIndices = {}
         self.dataHistogram = {}
+
+    def getDCAData(self, genesFile, vectorFile, labelFile, booleanify=False, thresholdsFile=None):
+        genes_fd = open(genesFile, 'r')
+        vectors_fd = open(vectorFile, 'r')
+
+        dict_X = {}
+        dict_y = {}
+        posKeys = []
+        negKeys = []
+        wantedPosGenes = open(labelFile, "r").read().split()
+        for line in genes_fd:
+            gene = line.rstrip()
+            vector = map(float, vectors_fd.readline().rstrip().split(','))
+            dict_X[gene] = vector
+            if gene in wantedPosGenes:
+                dict_y[gene] = 1
+                posKeys.append(gene)
+            else:
+                dict_y[gene] = 0
+                negKeys.append(gene)
+        return (dict_X, dict_y, posKeys, negKeys)
 
     def getData(self, positiveLabelsFileName, dataFileDescriptors):
         headers = ["Data type", "File Name", "Filter Rule"]
@@ -46,11 +68,15 @@ class dataGrabber:
                 negKeys.append(geneID)
         return (self.data, labelDict, posKeys, negKeys, self.dataIndices)
 
-    def convertToCSV(self, featureDict, labelDict, fileName, duplicatePos=1, duplicateNeg=1):
+    def convertToCSV(self, featureDict, labelDict, fileName, isBinary=False, duplicatePos=1, duplicateNeg=1):
         csvFile = open(fileName, "w")
         featureNames = ["GeneID"] + [""] * len(self.dataIndices)
         for edgeName, index in self.dataIndices.iteritems():
             featureNames[index + 1] = edgeName
+        numDims = len(featureDict.values()[0])
+        if len(featureNames) < numDims:
+            for i in range(0, numDims - len(featureNames) + 1):
+                featureNames.append('feature{0}'.format(i))
         featureNames.append("Class")
         csvFile.write(str(featureNames).strip("[]").replace("'", "") + '\n')
         for key, featureVector in featureDict.iteritems():
@@ -58,7 +84,10 @@ class dataGrabber:
                 label = "POSITIVE"
             else:
                 label = "NEGATIVE"
-            outString = str(key) + ", " + str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + str(label)
+            if isBinary:
+                outString = str(key) + ", " + str(featureVector).strip("[]").replace("1", "TRUE").replace("0", "FALSE") + ", " + str(label)
+            else:
+                outString = str(key) + ", " + str(featureVector).strip("[]").replace("'", "") + ", " + str(label)
             if label == "POSITIVE":
                 for i in range (0, duplicatePos):
                     csvFile.write(outString + '\n')

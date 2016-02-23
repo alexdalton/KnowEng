@@ -55,7 +55,7 @@ class ExampleSampler:
 
         return self.dict_X, self.dict_y, tomekLinkKeys
 
-    def smote(self, minorityKeys, N, k, label):
+    def smote(self, minorityKeys, N, k, label, isBinary=False):
         T = len(minorityKeys)
 
         if k > T:
@@ -88,10 +88,15 @@ class ExampleSampler:
                 # set synthetic feature to initially be a copy of the original
                 syntheticExample = list(minorityExample)
                 for featureIndex in range(0, len(minorityExample)):
-                    dif = minorityExample[featureIndex] != neighborMinorityExample[featureIndex]
-                    # if bits differ and with probability 50% flip the bit
-                    if dif and random() > 0.5:
-                        syntheticExample[featureIndex] ^= 1
+                    if isBinary:
+                        dif = minorityExample[featureIndex] != neighborMinorityExample[featureIndex]
+                        # if bits differ and with probability 50% flip the bit
+                        if dif and random() > 0.5:
+                            syntheticExample[featureIndex] ^= 1
+                    else:
+                        dif = neighborMinorityExample[featureIndex] - minorityExample[featureIndex]
+                        if random() >= 0.5:
+                            syntheticExample[featureIndex] = minorityExample[featureIndex] + dif
 
                 syntheticKey = "synthetic_" + str(syntheticCount)
                 syntheticCount += 1
