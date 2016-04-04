@@ -34,7 +34,10 @@ class helpers():
     def dictOfFeaturesToList(self, featureDict, keys):
         featureList = []
         for key in keys:
-            featureList.append(featureDict[key])
+            try:
+                featureList.append(featureDict[key])
+            except KeyError:
+                continue
         return featureList
 
     def getLabelSets(self, labelDict):

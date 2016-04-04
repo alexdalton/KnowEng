@@ -8,8 +8,8 @@ parser.add_option("-f", "--file", dest="filename",
 
 edgeFile = open(options.filename, 'r')
 
-genesFile = open(options.filename + ".genes", "w")
-adjacencyFile = open(options.filename + ".adjacency", "w")
+genesFile = open(options.filename + "_genes.txt", "w")
+adjacencyFile = open(options.filename + "_adjacency.txt", "w")
 
 geneDict = {}
 geneNum = 1

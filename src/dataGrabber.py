@@ -1,6 +1,7 @@
 import inspect
 from tabulate import tabulate
 import numpy as np
+import random
 
 
 class dataFileDescriptor:
@@ -27,17 +28,30 @@ class dataGrabber:
         dict_y = {}
         posKeys = []
         negKeys = []
-        wantedPosGenes = open(labelFile, "r").read().split()
-        for line in genes_fd:
-            gene = line.rstrip()
-            vector = map(float, vectors_fd.readline().rstrip().split(','))
-            dict_X[gene] = vector
-            if gene in wantedPosGenes:
-                dict_y[gene] = 1
-                posKeys.append(gene)
-            else:
+        if not labelFile == "random":
+            wantedPosGenes = open(labelFile, "r").read().split()
+            for line in genes_fd:
+                gene = line.rstrip()
+                vector = map(float, vectors_fd.readline().rstrip().split(','))
+                dict_X[gene] = vector
+                if gene in wantedPosGenes:
+                    dict_y[gene] = 1
+                    posKeys.append(gene)
+                else:
+                    dict_y[gene] = 0
+                    negKeys.append(gene)
+        else:
+            for line in genes_fd:
+                gene = line.rstrip()
+                vector = map(float, vectors_fd.readline().rstrip().split(','))
+                dict_X[gene] = vector
                 dict_y[gene] = 0
-                negKeys.append(gene)
+
+            posKeys = set(random.sample(dict_X.keys(), 300))
+            negKeys = set(dict_X.keys()) - posKeys
+            for key in posKeys:
+                dict_y[key] = 1
+
         return (dict_X, dict_y, posKeys, negKeys)
 
     def getData(self, positiveLabelsFileName, dataFileDescriptors):

@@ -4,11 +4,12 @@ from helpers import helpers
 import time
 from tabulate import tabulate
 from random import sample
+from ExampleSampler import ExampleSampler
 
 
 class Classifier:
 
-    def __init__(self, logger, dict_X, dict_y, kCrossValPos=0, kCrossValNeg=0, crossValExcludeSet=set(), verbose=False):
+    def __init__(self, logger, dict_X, dict_y, shouldSMOTE=False, smote_N=100, smote_k=5, kCrossValPos=0, kCrossValNeg=0, verbose=False):
         # class variables to initialize general classifier
         self.logger = logger
         self.verbose = verbose
@@ -25,8 +26,14 @@ class Classifier:
         (self.allPosExampleKeys, self.allNegExampleKeys) = self.helperObj.getLabelSets(dict_y)
         self.numAllPosExamples = len(self.allPosExampleKeys)
         self.numAllNegExamples = len(self.allNegExampleKeys)
-        self.crossValExcludeSet = set(crossValExcludeSet)
+        self.crossValExcludeSet = set()
         self._hideSamples()
+
+        if shouldSMOTE:
+            sampler = ExampleSampler(dict_X, dict_y, self.logger)
+            trainPosKeys = list(set(self.allPosExampleKeys) - set(self.hiddenPosExampleKeys))
+            self.dict_X, self.dict_y, self.crossValExcludeSet = sampler.smote(trainPosKeys, smote_N, smote_k, 1)
+            self.crossValExcludeSet = set(self.crossValExcludeSet)
 
         self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
         self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))
@@ -54,19 +61,29 @@ class Classifier:
             self.numHiddenNegExamples = len(self.hiddenNegExampleKeys)
             self.logger.log("{0}-fold cross-validation on negative examples".format(self.kCrossValNeg))
 
+        self.logger.log("Hidden positive keys:")
+        self.logger.log(str(self.hiddenPosExampleKeys))
+
+        self.logger.log("Train positive keys:")
+        self.logger.log(str(set(self.allPosExampleKeys) - self.crossValExcludeSet - set(self.hiddenPosExampleKeys)))
+
+        self.logger.log("Hidden negative keys:")
+        self.logger.log(str(self.hiddenNegExampleKeys))
+
         for exampleKey in self.hiddenPosExampleKeys + self.hiddenNegExampleKeys:
             self.hidden_X.append(self.dict_X[exampleKey])
             self.hidden_y.append(self.dict_y[exampleKey])
             del self.dict_X[exampleKey]
             del self.dict_y[exampleKey]
 
-    def score(self):
+    def score(self, randomSetName=None, randomSet=None, randomSetLabels=None):
         if self.trainedClassifier is None:
             self.logger.log("Need to train an SVM first")
             return
 
         scores = ["{0} x {1}".format(self.featureDims, self.totalExamples), self.numAllPosExamples,
                   self.numHiddenPosExamples, self.numAllNegExamples, self.numHiddenNegExamples]
+
         if self.kCrossValNeg > 1 or self.kCrossValPos > 1:
             start = time.mktime(time.localtime())
             self.logger.log("Running classification on hidden examples")
@@ -91,6 +108,19 @@ class Classifier:
         end = time.mktime(time.localtime())
         self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
         scores += self.reportScores(classifications, trainingLabels)
+
+        if randomSet:
+            for i in range(0, len(self.hiddenPosExampleKeys)):
+                self.dict_X[self.hiddenPosExampleKeys[i]] = self.hidden_X[i]
+            for i in range(0, len(self.hiddenNegExampleKeys)):
+                self.dict_X[self.hiddenNegExampleKeys[i]] = self.hidden_X[i + len(self.hiddenPosExampleKeys)]
+            self.logger.log("Running classification on random gene set: {0}".format(randomSetName))
+            randomExamples = self.helperObj.dictOfFeaturesToList(self.dict_X, randomSet)
+            start = time.mktime(time.localtime())
+            classifications = list(self.trainedClassifier.predict(randomExamples))
+            end = time.mktime(time.localtime())
+            self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
+            scores += [randomSetName] + self.reportScores(classifications, randomSetLabels)
 
         return scores
 
