@@ -11,6 +11,8 @@ from datetime import date
 import random
 
 
+# Returns the option value from a given section within the configuration, else returns a default value
+# Includes an option to split the value by comma seperator
 def grabOptionOrDefault(config, section, option, default=None, split=False):
     if config.has_option(section, option):
         if split:
@@ -20,6 +22,8 @@ def grabOptionOrDefault(config, section, option, default=None, split=False):
     else:
         return default
 
+# Returns the option value from a given section within the configuration, else raises an error
+# Includes an option to split the value by comma seperator
 def grabOptionOrError(config, section, option, split=False):
     try:
         if split:
@@ -131,7 +135,7 @@ for testName in config.sections():
                                                             kCrossValNeg, C, probability, shrinking, coef0, shouldSMOTE,
                                                             smote_N, smote_k, shouldUndersample, undersample_percent))
         featureDataFiles = []
-        featureFileBaseDir = "/home/alex/KnowEng/data/edges"
+        featureFileBaseDir = "/home/alex/KnowEng/data/featureVectors/DCAdata"
         for i in range(0, len(featureFiles)):
             if len(featureFilters) > 0:
                 if featureFilters[i] == "bySelection":

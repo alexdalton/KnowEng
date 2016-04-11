@@ -34,6 +34,11 @@ class Classifier:
             trainPosKeys = list(set(self.allPosExampleKeys) - set(self.hiddenPosExampleKeys))
             self.dict_X, self.dict_y, self.crossValExcludeSet = sampler.smote(trainPosKeys, smote_N, smote_k, 1)
             self.crossValExcludeSet = set(self.crossValExcludeSet)
+            self.totalExamples = len(self.dict_X)
+            self.featureDims = len(self.dict_X.values()[0])
+            (self.allPosExampleKeys, self.allNegExampleKeys) = self.helperObj.getLabelSets(dict_y)
+            self.numAllPosExamples = len(self.allPosExampleKeys)
+            self.numAllNegExamples = len(self.allNegExampleKeys)
 
         self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
         self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))
