@@ -5,11 +5,13 @@ import time
 from tabulate import tabulate
 from random import sample
 from ExampleSampler import ExampleSampler
+from sklearn import linear_model
 
 
 class Classifier:
 
-    def __init__(self, logger, dict_X, dict_y, shouldSMOTE=False, smote_N=100, smote_k=5, kCrossValPos=0, kCrossValNeg=0, verbose=False):
+    def __init__(self, logger, dict_X, dict_y, shouldSMOTE=False, smote_N=100, smote_k=5,
+                 doLASSO=False, alpha=1.0, kCrossValPos=0, kCrossValNeg=0, verbose=False):
         # class variables to initialize general classifier
         self.logger = logger
         self.verbose = verbose
@@ -40,6 +42,28 @@ class Classifier:
             self.numAllPosExamples = len(self.allPosExampleKeys)
             self.numAllNegExamples = len(self.allNegExampleKeys)
 
+        if doLASSO:
+            positiveExampleKeys = set(self.allPosExampleKeys) - set(self.hiddenPosExampleKeys)
+            pos = open("pos.txt", "w")
+            pos.write(str(positiveExampleKeys))
+            pos.close()
+            negativeExampleKeys = set(self.allNegExampleKeys) - set(self.hiddenNegExampleKeys)
+            neg = open("pos.txt", "w")
+            neg.write(str(negativeExampleKeys))
+            neg.close()
+            y = ([1] * len(positiveExampleKeys)) + ([0] * len(negativeExampleKeys))
+            X = self.helperObj.dictOfFeaturesToList(self.dict_X, positiveExampleKeys) + \
+                self.helperObj.dictOfFeaturesToList(self.dict_X, negativeExampleKeys)
+            xfp = open("X.txt", "w")
+            xfp.write(str(X))
+            xfp.close()
+            clf = linear_model.RandomizedLasso(alpha=alpha, n_jobs=-1)
+            clf.fit(X, y)
+            output = open("lasso.txt", "w")
+            output.write('\n' + str(clf.scores_) + '\n')
+            output.close()
+            exit(0)
+
         self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
         self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))
         self.logger.log("Number of Hidden Positive Examples: {0}".format(self.numHiddenPosExamples))
@@ -66,14 +90,14 @@ class Classifier:
             self.numHiddenNegExamples = len(self.hiddenNegExampleKeys)
             self.logger.log("{0}-fold cross-validation on negative examples".format(self.kCrossValNeg))
 
-        self.logger.log("Hidden positive keys:")
-        self.logger.log(str(self.hiddenPosExampleKeys))
-
-        self.logger.log("Train positive keys:")
-        self.logger.log(str(set(self.allPosExampleKeys) - self.crossValExcludeSet - set(self.hiddenPosExampleKeys)))
-
-        self.logger.log("Hidden negative keys:")
-        self.logger.log(str(self.hiddenNegExampleKeys))
+        # self.logger.log("Hidden positive keys:")
+        # self.logger.log(str(self.hiddenPosExampleKeys))
+        #
+        # self.logger.log("Train positive keys:")
+        # self.logger.log(str(set(self.allPosExampleKeys) - self.crossValExcludeSet - set(self.hiddenPosExampleKeys)))
+        #
+        # self.logger.log("Hidden negative keys:")
+        # self.logger.log(str(self.hiddenNegExampleKeys))
 
         for exampleKey in self.hiddenPosExampleKeys + self.hiddenNegExampleKeys:
             self.hidden_X.append(self.dict_X[exampleKey])

@@ -158,8 +158,11 @@ for testName in config.sections():
         featureFiles[1] = os.path.join(featureFileBaseDir, featureFiles[1])
         (dict_X, dict_y, positiveKeys, negativeKeys) = dataRetriever.getDCAData(featureFiles[0], featureFiles[1], labelFile)
 
+        doLASSO = bool(grabOptionOrDefault(config, testName, "LASSO", default="True") in ["True", "true", "1"])
+        alpha = float(grabOptionOrDefault(config, testName, "alpha", default=1.0) )
+
         x = Classifier(loggerObj, dict_X, dict_y, shouldSMOTE=shouldSMOTE, smote_N=smote_N, smote_k=smote_k,
-                       kCrossValPos=kCrossValPos, kCrossValNeg=kCrossValNeg, verbose=True)
+                       doLASSO=doLASSO, alpha=alpha, kCrossValPos=kCrossValPos, kCrossValNeg=kCrossValNeg, verbose=True)
 
         if algorithm == "SVM":
             x.trainSVM(kernel, C, gamma, probability, shrinking, class_weight, degree, coef0)
