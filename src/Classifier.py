@@ -6,6 +6,7 @@ from tabulate import tabulate
 from random import sample
 from ExampleSampler import ExampleSampler
 from sklearn import linear_model
+import numpy as np
 
 
 class Classifier:
@@ -44,25 +45,19 @@ class Classifier:
 
         if doLASSO:
             positiveExampleKeys = set(self.allPosExampleKeys) - set(self.hiddenPosExampleKeys)
-            pos = open("pos.txt", "w")
-            pos.write(str(positiveExampleKeys))
-            pos.close()
             negativeExampleKeys = set(self.allNegExampleKeys) - set(self.hiddenNegExampleKeys)
-            neg = open("pos.txt", "w")
-            neg.write(str(negativeExampleKeys))
-            neg.close()
             y = ([1] * len(positiveExampleKeys)) + ([0] * len(negativeExampleKeys))
             X = self.helperObj.dictOfFeaturesToList(self.dict_X, positiveExampleKeys) + \
                 self.helperObj.dictOfFeaturesToList(self.dict_X, negativeExampleKeys)
-            xfp = open("X.txt", "w")
-            xfp.write(str(X))
-            xfp.close()
-            clf = linear_model.RandomizedLasso(alpha=alpha, n_jobs=-1)
+            clf = linear_model.Lasso(alpha=alpha, selection="random")
             clf.fit(X, y)
-            output = open("lasso.txt", "w")
-            output.write('\n' + str(clf.scores_) + '\n')
-            output.close()
-            exit(0)
+
+            coefs = np.array(clf.coef_)
+            zeroCoefIndices = np.where(coefs == 0)[0].tolist()
+            for key in self.dict_X.iterkeys():
+                self.dict_X[key] = np.delete(self.dict_X[key], zeroCoefIndices, 0).tolist()
+            self.hidden_X = np.delete(self.hidden_X, zeroCoefIndices, 1).tolist()
+            self.featureDims = len(self.dict_X.values()[0])
 
         self.logger.log("Data size: {0} x {1}".format(self.featureDims, self.totalExamples))
         self.logger.log("Total Number of Positive Examples: {0}".format(self.numAllPosExamples))

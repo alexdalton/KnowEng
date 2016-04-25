@@ -10,6 +10,8 @@ from logger import logger
 from datetime import date
 import random
 
+knowEngRoot = "/workspace/"
+
 
 # Returns the option value from a given section within the configuration, else returns a default value
 # Includes an option to split the value by comma seperator
@@ -44,7 +46,7 @@ parser.add_option("-f", "--file", dest="configFilename",
 if options.configFilename is None:
     parser.print_help()
 
-configFileBaseDir = "/home/alex/KnowEng/configs"
+configFileBaseDir = knowEngRoot + "KnowEng/configs"
 configFilename = os.path.join(configFileBaseDir, options.configFilename)
 
 if not os.path.exists(configFilename):
@@ -58,7 +60,7 @@ if not config.has_section("global"):
     print("No global configuration specified in config file")
     exit(0)
 
-resultFileBaseDir = "/home/alex/KnowEng/results"
+resultFileBaseDir = knowEngRoot + "KnowEng/results"
 resultsFilename = os.path.join(resultFileBaseDir, config.get("global", "resultsFile"))
 shouldAppend = config.get("global", "append") in ["True", "true", "1"]
 resultsHeaders = ["Gene Set", "Feature Info", "Algorithm", "Algorithm Info", "Data Size", "Num pos",
@@ -82,13 +84,13 @@ for testName in config.sections():
     # Get files needed to create labeled feature vectors
     labelFiles = [grabOptionOrError(config, testName, "labelFile")]
     if labelFiles[0] == "All":
-        labelFiles = os.listdir("/home/alex/KnowEng/data/geneSets/")
+        labelFiles = os.listdir(knowEngRoot + "KnowEng/data/geneSets/")
 
     for labelFile in labelFiles:
         output = []
         output.append(labelFile)
         if not labelFile == "random":
-            labelFile = os.path.join("/home/alex/KnowEng/data/geneSets/", labelFile)
+            labelFile = os.path.join(knowEngRoot + "KnowEng/data/geneSets/", labelFile)
         featureFiles = grabOptionOrError(config, testName, "featureFiles", split=True)
         featureFilters = grabOptionOrDefault(config, testName, "featureFilters", split=True, default=[])
         output.append(str(featureFiles).replace(",", ";") + '; ' + str(featureFilters).replace(",", ";"))
@@ -98,9 +100,9 @@ for testName in config.sections():
         randomSetLabels = None
         if grabOptionOrDefault(config, testName, "score") == "random":
             while True:
-                randomLabelFile = random.sample(os.listdir("/home/alex/KnowEng/data/geneSets/"), 1)[0]
+                randomLabelFile = random.sample(os.listdir(knowEngRoot + "KnowEng/data/geneSets/"), 1)[0]
                 if not randomLabelFile == labelFile:
-                    randomLabelFile = os.path.join("/home/alex/KnowEng/data/geneSets/", randomLabelFile)
+                    randomLabelFile = os.path.join(knowEngRoot + "KnowEng/data/geneSets/", randomLabelFile)
                     randomSet = open(randomLabelFile, "r").read().split()
                     randomSetLabels = [1] * len(randomSet)
                     break
@@ -135,19 +137,19 @@ for testName in config.sections():
                                                             kCrossValNeg, C, probability, shrinking, coef0, shouldSMOTE,
                                                             smote_N, smote_k, shouldUndersample, undersample_percent))
         featureDataFiles = []
-        featureFileBaseDir = "/home/alex/KnowEng/data/featureVectors/DCAdata"
+        featureFileBaseDir = knowEngRoot + "KnowEng/data/featureVectors/DCAdata"
         for i in range(0, len(featureFiles)):
             if len(featureFilters) > 0:
                 if featureFilters[i] == "bySelection":
                     featureSelectionFile = str(grabOptionOrError(config, testName, "selectedFeaturesFile"))
-                    filter = lambda feature, count: feature in open(os.path.join("/home/alex/KnowEng/data/", featureSelectionFile), 'r').read().split()
+                    filter = lambda feature, count: feature in open(os.path.join(knowEngRoot + "KnowEng/data/", featureSelectionFile), 'r').read().split()
                 elif featureFilters[i] == "byCount":
                     filter = lambda feature, count: count >= 40 and count <= 2000
                 else:
                     filter = lambda feature, count: True
                 featureDataFiles.append(dataFileDescriptor(os.path.join(featureFileBaseDir, featureFiles[i]), filter))
 
-        logOutputDir = "/home/alex/KnowEng/logs/" + date.today().isoformat()
+        logOutputDir = knowEngRoot + "KnowEng/logs/" + date.today().isoformat()
         if not os.path.isdir(logOutputDir):
             os.mkdir(logOutputDir)
 
