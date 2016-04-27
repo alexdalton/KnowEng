@@ -53,6 +53,41 @@ class dataGrabber:
                 dict_y[key] = 1
 
         return (dict_X, dict_y, posKeys, negKeys)
+        
+    def getDCAData2(self, vectorFile, labelFile):
+        vectors_fd = open(vectorFile, 'r')
+
+        dict_X = {}
+        dict_y = {}
+        posKeys = []
+        negKeys = []
+        if not labelFile == "random":
+            wantedPosGenes = open(labelFile, "r").read().split()
+            for line in vectors_fd:
+                if len(line.split()) < 10:
+                    continue
+                gene = line.split()[0]
+                vector = map(float, line.rstrip().split()[1:])
+                dict_X[gene] = vector
+                if gene in wantedPosGenes:
+                    dict_y[gene] = 1
+                    posKeys.append(gene)
+                else:
+                    dict_y[gene] = 0
+                    negKeys.append(gene)
+        else:
+            for line in genes_fd:
+                gene = line.split()[0]
+                vector = map(float, line.rstrip().split()[1:])
+                dict_X[gene] = vector
+                dict_y[gene] = 0
+
+            posKeys = set(random.sample(dict_X.keys(), 300))
+            negKeys = set(dict_X.keys()) - posKeys
+            for key in posKeys:
+                dict_y[key] = 1
+
+        return (dict_X, dict_y, posKeys, negKeys)
 
     def getData(self, positiveLabelsFileName, dataFileDescriptors):
         headers = ["Data type", "File Name", "Filter Rule"]

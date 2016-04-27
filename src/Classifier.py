@@ -1,4 +1,4 @@
-from sklearn import svm
+from sklearn import svm, metrics
 from centroid import Centroid
 from helpers import helpers
 import time
@@ -20,12 +20,14 @@ class Classifier:
 
         self.dict_X = dict_X.copy()
         self.dict_y = dict_y.copy()
+        
         self.kCrossValPos = kCrossValPos
         self.kCrossValNeg = kCrossValNeg
         self.hidden_X = []
         self.hidden_y = []
         self.totalExamples = len(self.dict_X)
         self.featureDims = len(self.dict_X.values()[0])
+        print self.featureDims
         (self.allPosExampleKeys, self.allNegExampleKeys) = self.helperObj.getLabelSets(dict_y)
         self.numAllPosExamples = len(self.allPosExampleKeys)
         self.numAllNegExamples = len(self.allNegExampleKeys)
@@ -112,11 +114,18 @@ class Classifier:
             start = time.mktime(time.localtime())
             self.logger.log("Running classification on hidden examples")
             classifications = list(self.trainedClassifier.predict(self.hidden_X))
+            positive_probabilities = self.trainedClassifier.predict_proba(self.hidden_X)[:, 0].tolist()
+            
+            #fpr, tpr, thresholds = metrics.roc_curve(self.hidden_y, positive_probabilities, pos_label=1)
+            # self.logger.log(str(fpr.tolist()))
+            # self.logger.log(str(tpr.tolist()))
+            # self.logger.log(str(thresholds.tolist()))
+            
             end = time.mktime(time.localtime())
             self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
-            scores += self.reportScores(classifications, self.hidden_y)
+            scores += self.reportScores(classifications, positive_probabilities, self.hidden_y)
         else:
-            scores += ['N/A'] * 11
+            scores += ['N/A'] * 12
 
         self.logger.log("Running classification on training examples")
         trainingExamples = []
@@ -129,9 +138,10 @@ class Classifier:
             trainingLabels.append(0)
         start = time.mktime(time.localtime())
         classifications = list(self.trainedClassifier.predict(trainingExamples))
+        positive_probabilities = self.trainedClassifier.predict_proba(trainingExamples)[:, 0].tolist()
         end = time.mktime(time.localtime())
         self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
-        scores += self.reportScores(classifications, trainingLabels)
+        scores += self.reportScores(classifications, trainingLabels, positive_probabilities)
 
         if randomSet:
             for i in range(0, len(self.hiddenPosExampleKeys)):
@@ -142,13 +152,14 @@ class Classifier:
             randomExamples = self.helperObj.dictOfFeaturesToList(self.dict_X, randomSet)
             start = time.mktime(time.localtime())
             classifications = list(self.trainedClassifier.predict(randomExamples))
+            positive_probabilities = self.trainedClassifier.predict_proba(randomExamples)[:, 0].tolist()
             end = time.mktime(time.localtime())
             self.logger.log("Elapsed Prediction Time: {0} minutes".format((end - start) / 60))
-            scores += [randomSetName] + self.reportScores(classifications, randomSetLabels)
+            scores += [randomSetName] + self.reportScores(classifications, randomSetLabels, positive_probabilities)
 
         return scores
 
-    def reportScores(self, predictedLabels, trueLabels):
+    def reportScores(self, predictedLabels, trueLabels, positive_probabilities):
         numPosEx = float(trueLabels.count(1))
         numNegEx = float(trueLabels.count(0))
         numCorrectPos = 0.0
@@ -217,8 +228,11 @@ class Classifier:
         self.logger.log('\n' + tabulate(table, headers=headers))
 
         self.logger.log("\nOverall accuracy: {0}".format(accuracy))
+        
+        auc_score = metrics.roc_auc_score(trueLabels, positive_probabilities, average='macro')
+        self.logger.log("AUC score: {0}".format(auc_score))
 
-        return [pprecision, precall, pf1, nprecision, nrecall, nf1, numCorrectPos,
+        return [auc_score, pprecision, precall, pf1, nprecision, nrecall, nf1, numCorrectPos,
                 numIncorrectPos, numIncorrectNeg, numCorrectNeg, accuracy]
 
     def _printVerboseTrainInfo(self, C, kernel, degree, gamma, coef0, probability, shrinking, class_weight):
@@ -259,7 +273,7 @@ class Classifier:
             self.helperObj.dictOfFeaturesToList(self.dict_X, negativeExampleKeys)
 
         svc = svm.SVC(C=C, kernel=kernel, probability=probability, shrinking=shrinking,
-                      class_weight=class_weight, gamma=gamma, degree=degree, coef0=coef0)
+                      class_weight=class_weight, gamma=gamma, degree=degree, coef0=coef0, cache_size=1000)
 
         svc.fit(X, y)
 

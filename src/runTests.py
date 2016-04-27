@@ -64,9 +64,9 @@ resultFileBaseDir = knowEngRoot + "KnowEng/results"
 resultsFilename = os.path.join(resultFileBaseDir, config.get("global", "resultsFile"))
 shouldAppend = config.get("global", "append") in ["True", "true", "1"]
 resultsHeaders = ["Gene Set", "Feature Info", "Algorithm", "Algorithm Info", "Data Size", "Num pos",
-                  "Num hidden pos", "Num neg", "Num hidden neg", "Hidden Pos Precision", "Hidden Pos Recall", "Hidden Pos F1",
+                  "Num hidden pos", "Num neg", "Num hidden neg", "Hidden AUC Score", "Hidden Pos Precision", "Hidden Pos Recall", "Hidden Pos F1",
                   "Hidden Neg Precision", "Hidden Neg Recall", "Hidden Neg F1", "Hidden True Pos",
-                  "Hidden False Neg", "Hidden False Pos", "Hidden True Neg", "Hidden Accuracy",
+                  "Hidden False Neg", "Hidden False Pos", "Hidden True Neg", "Hidden Accuracy", "Train AUC Score",
                   "Train Pos Precision", "Train Pos Recall", "Train Pos F1", "Train Neg Precision",
                   "Train Neg Recall", "Train Neg F1", "Train True Pos", "Train False Neg",
                   "Train False Pos", "Train True Neg", "Train Accuracy"]
@@ -115,7 +115,7 @@ for testName in config.sections():
         kernel = str(grabOptionOrDefault(config, testName, "kernel", default="rbf"))
         gamma = float(grabOptionOrDefault(config, testName, "gamma", default=0.0))
         degree = int(grabOptionOrDefault(config, testName, "degree", default=3))
-        class_weight = str(grabOptionOrDefault(config, testName, "class_weight", default="auto"))
+        class_weight = str(grabOptionOrDefault(config, testName, "class_weight", default="balanced"))
         kCrossValPos = int(grabOptionOrDefault(config, testName, "kCrossValPos", default=3))
         kCrossValNeg = int(grabOptionOrDefault(config, testName, "kCrossValNeg", default=0))
         C = float(grabOptionOrDefault(config, testName, "C", default=1.0))
@@ -157,10 +157,11 @@ for testName in config.sections():
         helperObj = helpers(loggerObj)
         dataRetriever = dataGrabber(loggerObj)
         featureFiles[0] = os.path.join(featureFileBaseDir, featureFiles[0])
-        featureFiles[1] = os.path.join(featureFileBaseDir, featureFiles[1])
-        (dict_X, dict_y, positiveKeys, negativeKeys) = dataRetriever.getDCAData(featureFiles[0], featureFiles[1], labelFile)
-
-        doLASSO = bool(grabOptionOrDefault(config, testName, "LASSO", default="True") in ["True", "true", "1"])
+        #featureFiles[1] = os.path.join(featureFileBaseDir, featureFiles[1])
+        loggerObj.log("Features from file: {0}\nLabels from file: {1}".format(featureFiles[0], labelFile))
+        (dict_X, dict_y, positiveKeys, negativeKeys) = dataRetriever.getDCAData2(featureFiles[0], labelFile)
+        
+        doLASSO = bool(grabOptionOrDefault(config, testName, "LASSO", default="False") in ["True", "true", "1"])
         alpha = float(grabOptionOrDefault(config, testName, "alpha", default=1.0) )
 
         x = Classifier(loggerObj, dict_X, dict_y, shouldSMOTE=shouldSMOTE, smote_N=smote_N, smote_k=smote_k,
